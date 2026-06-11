@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Denklem - Eğitsel Matematik Aracı</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-container">
+            <div class="logo">
+                <span class="logo-icon">∑</span>
+                <h1>Denklem</h1>
+            </div>
+            
+            <div class="header-controls">
+                <div class="class-selector">
+                    <label for="classLevel">Sınıf Seçin:</label>
+                    <select id="classLevel">
+                        <option value="5">5. Sınıf</option>
+                        <option value="6" selected>6. Sınıf</option>
+                        <option value="7">7. Sınıf</option>
+                        <option value="lgs">LGS</option>
+                    </select>
+                </div>
+                
+                <button id="themeToggle" class="theme-btn" title="Tema Değiştir">
+                    <span>🌙</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <div class="container">
+        <!-- SIDEBAR - ÖRNEK DENKLEMLER -->
+        <aside class="sidebar">
+            <h2>📚 Örnek Denklemler</h2>
+            <div id="examplesContainer" class="examples-list"></div>
+            
+            <div class="info-box">
+                <h3>💡 İpucu</h3>
+                <p id="tipText">Denklemin her iki tarafına aynı işlemi uygula!</p>
+            </div>
+
+            <div class="progress-box">
+                <h3>📊 İlerleme</h3>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <p id="progressText">0 / 10 Çözüldü</p>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <!-- INPUT SECTION -->
+            <section class="input-section">
+                <h2>📝 Denklem Gir</h2>
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        id="equationInput" 
+                        class="equation-input" 
+                        placeholder="Örn: 2x + 3 = 11"
+                        autocomplete="off"
+                    >
+                    <button id="solveBtn" class="btn btn-primary">Çöz</button>
+                    <button id="autoBtn" class="btn btn-secondary">Otomatik Çöz</button>
+                </div>
+                <p class="input-hint" id="inputHint"></p>
+            </section>
+
+            <!-- VISUALIZATION SECTION -->
+            <section class="visualization-section">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="scale">⚖️ Terazi</button>
+                    <button class="tab-btn" data-tab="blocks">🟦 Karolı</button>
+                    <button class="tab-btn" data-tab="number-line">📍 Sayı Doğrusu</button>
+                </div>
+
+                <!-- TAB 1: SCALE -->
+                <div id="scale" class="tab-content active">
+                    <div class="scale-container">
+                        <div class="scale">
+                            <div class="scale-left">
+                                <h3>Sol Taraf</h3>
+                                <div id="scaleLeft" class="scale-blocks"></div>
+                            </div>
+                            <div class="scale-pivot">⚖️</div>
+                            <div class="scale-right">
+                                <h3>Sağ Taraf</h3>
+                                <div id="scaleRight" class="scale-blocks"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: BLOCKS -->
+                <div id="blocks" class="tab-content">
+                    <div class="blocks-container">
+                        <div class="equation-display">
+                            <div id="blocksDisplay" class="blocks-display"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: NUMBER LINE -->
+                <div id="number-line" class="tab-content">
+                    <div class="number-line-container">
+                        <div id="numberLineDisplay" class="number-line"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STEPS SECTION -->
+            <section class="steps-section">
+                <h2>📊 Çözüm Adımları</h2>
+                <div id="stepsContainer" class="steps-container">
+                    <p class="placeholder">Bir denklem gir ve çözmek için butona tıkla</p>
+                </div>
+
+                <div class="controls">
+                    <button id="prevStepBtn" class="btn btn-secondary" disabled>⬅️ Önceki Adım</button>
+                    <button id="nextStepBtn" class="btn btn-secondary" disabled>Sonraki Adım ➡️</button>
+                    <button id="resetBtn" class="btn btn-danger" disabled>🔄 Sıfırla</button>
+                </div>
+            </section>
+
+            <!-- RESULT SECTION -->
+            <section class="result-section" id="resultSection" style="display: none;">
+                <div class="result-card">
+                    <h3>✅ Sonuç</h3>
+                    <div class="result-display">
+                        <p id="resultText"></p>
+                    </div>
+                    <button id="downloadBtn" class="btn btn-success">📥 İndir</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <p>&copy; 2025 Denklem | Eğitsel Matematik Aracı | Ortaokul & LGS</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
