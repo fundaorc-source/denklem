@@ -310,26 +310,35 @@ function visualizeScale(equation) {
   const parts = equation.split('=');
   if (parts.length !== 2) return;
 
-  // Basit sayı sayma
-  const leftNumbers = (parts[0].match(/\d+/g) || []).map(Number);
-  const rightNumbers = (parts[1].match(/\d+/g) || []).map(Number);
+  const left = parts[0].trim();
+  const right = parts[1].trim();
 
-  const leftSum = leftNumbers.reduce((a, b) => a + b, 0);
-  const rightSum = rightNumbers.reduce((a, b) => a + b, 0);
+  // Sol tarafı göster
+  renderScaleSide(left, scaleLeft);
+  
+  // Sağ tarafı göster
+  renderScaleSide(right, scaleRight);
+}
 
-  for (let i = 0; i < Math.min(leftSum, 10); i++) {
-    const block = document.createElement('div');
-    block.className = 'block block-one';
-    block.textContent = '1';
-    scaleLeft.appendChild(block);
-  }
-
-  for (let i = 0; i < Math.min(rightSum, 10); i++) {
-    const block = document.createElement('div');
-    block.className = 'block block-one';
-    block.textContent = '1';
-    scaleRight.appendChild(block);
-  }
+function renderScaleSide(side, container) {
+  const tokens = side.match(/[+\-]?\d+x|[+\-]?\d+/g) || [];
+  
+  tokens.forEach((token) => {
+    if (token.includes('x')) {
+      const block = document.createElement('div');
+      block.className = 'block block-x';
+      block.textContent = 'x';
+      container.appendChild(block);
+    } else {
+      const num = parseInt(token);
+      for (let i = 0; i < Math.abs(num); i++) {
+        const block = document.createElement('div');
+        block.className = 'block block-one';
+        block.textContent = '1';
+        container.appendChild(block);
+      }
+    }
+  });
 }
 
 function visualizeBlocks(equation) {
@@ -345,6 +354,7 @@ function visualizeBlocks(equation) {
   display.style.flexWrap = 'wrap';
   display.style.fontSize = '1.2rem';
   display.style.fontWeight = 'bold';
+  display.style.color = '#fbbf24';
 
   display.textContent = equation.replace('=', ' = ');
   blocksDisplay.appendChild(display);
