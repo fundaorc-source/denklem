@@ -1,6 +1,5 @@
 // DENKLEM ÇÖZÜCÜ - PROFESSIONAL MATH EDUCATION TOOL
 
-// CLASS LEVEL EXAMPLES
 const classExamples = {
   5: [
     { equation: 'x + 5 = 12', solution: 'x = 7' },
@@ -39,7 +38,6 @@ const tips = {
   lgs: 'İşlem sırasını doğru takip et: Parantez → Çarpma/Bölme → Toplama/Çıkarma',
 };
 
-// STATE
 let state = {
   equation: '',
   steps: [],
@@ -48,8 +46,6 @@ let state = {
   solution: null,
   solvedCount: 0,
 };
-
-let autoMode = false;
 
 // DOM ELEMENTS
 const classLevelSelect = document.getElementById('classLevel');
@@ -73,9 +69,8 @@ const resultSection = document.getElementById('resultSection');
 const resultText = document.getElementById('resultText');
 const downloadBtn = document.getElementById('downloadBtn');
 const inputHint = document.getElementById('inputHint');
-const tabs = document.querySelectorAll('.tab-btn');
 
-// ===== EVENT LISTENERS =====
+// EVENT LISTENERS
 classLevelSelect.addEventListener('change', () => {
   loadExamples();
   updateTip();
@@ -84,29 +79,24 @@ classLevelSelect.addEventListener('change', () => {
 
 themeToggle.addEventListener('click', toggleTheme);
 solveBtn.addEventListener('click', solveEquation);
-autoBtn.addEventListener('click', solveAuto);
+autoBtn.addEventListener('click', solveEquation);
 prevStepBtn.addEventListener('click', previousStep);
 nextStepBtn.addEventListener('click', nextStep);
-resetBtn.addEventListener('click', () => resetState());
+resetBtn.addEventListener('click', resetState);
 downloadBtn.addEventListener('click', downloadSolution);
 
 equationInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') solveEquation();
 });
 
-tabs.forEach((tab) => {
-  tab.addEventListener('click', () => switchTab(tab.dataset.tab));
-});
-
-// ===== INITIALIZATION =====
+// INITIALIZATION
 window.addEventListener('DOMContentLoaded', () => {
   loadExamples();
   updateTip();
   loadTheme();
 });
 
-// ===== FUNCTIONS =====
-
+// FUNCTIONS
 function loadExamples() {
   const classLevel = classLevelSelect.value;
   const examples = classExamples[classLevel];
@@ -143,6 +133,81 @@ function loadTheme() {
   }
 }
 
+function evaluateExpression(expr, variable, value) {
+  try {
+    let result = expr.replace(new RegExp(variable, 'g'), `(${value})`);
+    result = result.replace(/(\d)\(/g, '$1*(');
+    result = result.replace(/\)(\d)/g, ')*$1');
+    result = result.replace(/\)\(/g, ')*(');
+    
+    return Function('"use strict"; return (' + result + ')')();
+  } catch (e) {
+    return NaN;
+  }
+}
+
+function solveLiner(left, right, variable) {
+  try {
+    for (let x = -1000; x <= 1000; x++) {
+      const leftVal = evaluateExpression(left, variable, x);
+      const rightVal = evaluateExpression(right, variable, x);
+      
+      if (!isNaN(leftVal) && !isNaN(rightVal)) {
+        if (Math.abs(leftVal - rightVal) < 0.01) {
+          return x;
+        }
+      }
+    }
+    return null;
+  } catch (e) {
+    console.error('Çözme hatası:', e);
+    return null;
+  }
+}
+
+function parseAndSolveEquation(equation) {
+  try {
+    equation = equation.replace(/\s+/g, '').toLowerCase();
+    
+    if (!equation.includes('=')) {
+      return { success: false, error: 'Denklemde "=" işareti olmalı!' };
+    }
+
+    const [left, right] = equation.split('=');
+    const variable = 'x';
+
+    const solution = solveLiner(left, right, variable);
+
+    if (solution === null) {
+      return { success: false, error: 'Bu denklemi çözemiyorum.' };
+    }
+
+    const steps = [
+      {
+        title: 'Başlangıç',
+        description: 'Verilen denklem',
+        equation: `${left} = ${right}`,
+      },
+      {
+        title: 'Çözüm Bulundu',
+        description: 'Bilinmeyen x\'i buldum',
+        equation: `x = ${solution}`,
+      }
+    ];
+
+    return {
+      success: true,
+      equation,
+      variable,
+      steps,
+      solution: solution.toString(),
+    };
+  } catch (error) {
+    console.error('Parse hatası:', error);
+    return { success: false, error: 'Hata: Denklemi kontrol et!' };
+  }
+}
+
 function solveEquation() {
   const equation = equationInput.value.trim();
   
@@ -169,7 +234,7 @@ function solveEquation() {
     resultText.textContent = `${result.variable} = ${result.solution}`;
     
     prevStepBtn.disabled = true;
-    nextStepBtn.disabled = false;
+    nextStepBtn.disabled = state.steps.length <= 1;
     resetBtn.disabled = false;
     
     inputHint.textContent = '✅ Denklem çözüldü! Adımları aşağıdan inceleyebilirsin.';
@@ -179,61 +244,6 @@ function solveEquation() {
     inputHint.style.color = '#ef4444';
     resultSection.style.display = 'none';
   }
-}
-
-function solveAuto() {
-  const equation = equationInput.value.trim();
-  
-  if (!equation) {
-    inputHint.textContent = '❌ Lütfen bir denklem gir!';
-    inputHint.style.color = '#ef4444';
-    return;
-  }
-
-  const result = parseAndSolveEquation(equation);
-  
-  if (result.success) {
-    state.equation = equation;
-    state.steps = result.steps;
-    state.solution = result.solution;
-    state.currentStep = 0;
-    state.solved = true;
-    state.solvedCount++;
-    autoMode = true;
-    
-    updateProgress();
-    displaySteps();
-    updateVisualization();
-    resultSection.style.display = 'block';
-    resultText.textContent = `${result.variable} = ${result.solution}`;
-    
-    prevStepBtn.disabled = true;
-    nextStepBtn.disabled = true;
-    resetBtn.disabled = false;
-    
-    inputHint.textContent = '✅ Otomatik çözüm gösterildi!';
-    inputHint.style.color = '#10b981';
-    
-    autoPlaySteps();
-  } else {
-    inputHint.textContent = '❌ ' + result.error;
-    inputHint.style.color = '#ef4444';
-    resultSection.style.display = 'none';
-  }
-}
-
-function autoPlaySteps() {
-  let stepIndex = 0;
-  const interval = setInterval(() => {
-    if (stepIndex < state.steps.length) {
-      state.currentStep = stepIndex;
-      displaySteps();
-      updateVisualization();
-      stepIndex++;
-    } else {\n      clearInterval(interval);
-      autoMode = false;
-    }
-  }, 2000);
 }
 
 function nextStep() {
@@ -300,16 +310,26 @@ function visualizeScale(equation) {
   const parts = equation.split('=');
   if (parts.length !== 2) return;
 
-  const left = parseSide(parts[0].trim());
-  const right = parseSide(parts[1].trim());
+  // Basit sayı sayma
+  const leftNumbers = (parts[0].match(/\d+/g) || []).map(Number);
+  const rightNumbers = (parts[1].match(/\d+/g) || []).map(Number);
 
-  left.forEach((item) => {
-    scaleLeft.appendChild(createBlock(item.type, item.value));
-  });
+  const leftSum = leftNumbers.reduce((a, b) => a + b, 0);
+  const rightSum = rightNumbers.reduce((a, b) => a + b, 0);
 
-  right.forEach((item) => {
-    scaleRight.appendChild(createBlock(item.type, item.value));
-  });
+  for (let i = 0; i < Math.min(leftSum, 10); i++) {
+    const block = document.createElement('div');
+    block.className = 'block block-one';
+    block.textContent = '1';
+    scaleLeft.appendChild(block);
+  }
+
+  for (let i = 0; i < Math.min(rightSum, 10); i++) {
+    const block = document.createElement('div');
+    block.className = 'block block-one';
+    block.textContent = '1';
+    scaleRight.appendChild(block);
+  }
 }
 
 function visualizeBlocks(equation) {
@@ -317,58 +337,17 @@ function visualizeBlocks(equation) {
   const parts = equation.split('=');
   if (parts.length !== 2) return;
 
-  const left = parts[0].trim();
-  const right = parts[1].trim();
-
   const display = document.createElement('div');
   display.style.display = 'flex';
   display.style.gap = '1rem';
   display.style.alignItems = 'center';
   display.style.justifyContent = 'center';
   display.style.flexWrap = 'wrap';
+  display.style.fontSize = '1.2rem';
+  display.style.fontWeight = 'bold';
 
-  display.appendChild(renderEquationSide(left));
-  
-  const equalsSpan = document.createElement('span');
-  equalsSpan.className = 'equals';
-  equalsSpan.textContent = '=';
-  display.appendChild(equalsSpan);
-  
-  display.appendChild(renderEquationSide(right));
-
+  display.textContent = equation.replace('=', ' = ');
   blocksDisplay.appendChild(display);
-}
-
-function renderEquationSide(side) {
-  const container = document.createElement('div');
-  container.style.display = 'flex';
-  container.style.gap = '0.5rem';
-  container.style.flexWrap = 'wrap';
-  container.style.alignItems = 'center';
-  container.style.justifyContent = 'center';
-
-  const tokens = side.match(/[+\-]?\d*x|[+\-]?\d+|[+\-]/g) || [];
-  
-  tokens.forEach((token) => {
-    if (token === '+' || token === '-') {
-      const span = document.createElement('span');
-      span.className = 'operator';
-      span.textContent = token;
-      container.appendChild(span);
-    } else if (token.includes('x')) {
-      const count = parseInt(token.replace('x', '') || '1');
-      for (let i = 0; i < Math.abs(count); i++) {
-        container.appendChild(createBlock('x', 1));
-      }
-    } else {
-      const count = parseInt(token || '0');
-      for (let i = 0; i < Math.abs(count); i++) {
-        container.appendChild(createBlock('one', 1));
-      }
-    }
-  });
-
-  return container;
 }
 
 function visualizeNumberLine(equation) {
@@ -376,144 +355,45 @@ function visualizeNumberLine(equation) {
 
   const match = equation.match(/x\s*=\s*([\d.-]+)/);
   if (!match) {
-    numberLineDisplay.innerHTML = '<p>Henüz çözülmedi.</p>';
+    numberLineDisplay.innerHTML = '<p style="text-align: center; color: #aaa;">Henüz çözülmedi.</p>';
     return;
   }
 
   const solution = parseFloat(match[1]);
-  const min = Math.floor(solution) - 5;
-  const max = Math.floor(solution) + 5;
+  const min = Math.floor(solution) - 3;
+  const max = Math.floor(solution) + 3;
 
   const line = document.createElement('div');
-  line.className = 'number-line-line';
+  line.style.height = '4px';
+  line.style.background = 'linear-gradient(90deg, #8b5cf6, #10b981)';
+  line.style.borderRadius = '2px';
+  line.style.margin = '2rem 0';
   numberLineDisplay.appendChild(line);
 
   const marks = document.createElement('div');
-  marks.className = 'number-line-marks';
+  marks.style.display = 'flex';
+  marks.style.justifyContent = 'space-between';
+  marks.style.fontSize = '0.9rem';
 
   for (let i = min; i <= max; i++) {
     const mark = document.createElement('div');
-    mark.className = 'number-line-mark';
-    mark.textContent = i;
+    mark.style.textAlign = 'center';
+    mark.style.flex = '1';
     
     if (i === Math.round(solution)) {
       mark.style.fontWeight = 'bold';
       mark.style.color = '#10b981';
       mark.style.fontSize = '1.1rem';
-      mark.innerHTML = `<span style="color: #fbbf24; font-size: 1.5rem;">●</span><br>${i}`;
+      mark.innerHTML = `<span style="font-size: 1.5rem;">●</span><br>${i}`;
+    } else {
+      mark.style.color = '#fbbf24';
+      mark.textContent = i;
     }
     
     marks.appendChild(mark);
   }
 
   numberLineDisplay.appendChild(marks);
-}
-
-function createBlock(type, value) {
-  const block = document.createElement('div');
-  block.className = `block block-${type}`;
-  block.textContent = type === 'x' ? 'x' : (type === 'one' ? '1' : '0');
-  return block;
-}
-
-function parseSide(side) {
-  const items = [];
-  const tokens = side.match(/[+\-]?\d*x|[+\-]?\d+/g) || [];
-  
-  tokens.forEach((token) => {
-    if (token.includes('x')) {
-      const count = parseInt(token.replace('x', '') || '1');
-      items.push({ type: 'x', value: Math.abs(count) });
-    } else {
-      const count = parseInt(token);
-      for (let i = 0; i < Math.abs(count); i++) {
-        items.push({ type: 'one', value: 1 });
-      }
-    }
-  });
-  
-  return items;
-}
-
-function parseAndSolveEquation(equation) {
-  try {
-    equation = equation.replace(/\s+/g, '').toLowerCase();
-    
-    if (!equation.includes('=')) {
-      return { success: false, error: 'Denklemde "=" işareti olmalı!' };
-    }
-
-    const [left, right] = equation.split('=');
-    const variable = equation.match(/[a-z]/?.[0] || 'x';
-
-    const steps = generateSolutionSteps(left, right, variable);
-    const solution = solveLiner(left, right, variable);
-
-    if (solution === null) {
-      return { success: false, error: 'Bu denklemi çözemiyorum. Daha basit bir denklem dene!' };
-    }
-
-    return {
-      success: true,
-      equation,
-      variable,
-      steps,
-      solution: parseFloat(solution).toFixed(2),
-    };
-  } catch (error) {
-    return { success: false, error: 'Hata: Denklemi kontrol et!' };
-  }
-}
-
-function solveLiner(left, right, variable) {
-  try {
-    for (let x = -1000; x <= 1000; x++) {
-      const leftVal = evaluateExpression(left, variable, x);
-      const rightVal = evaluateExpression(right, variable, x);
-      if (Math.abs(leftVal - rightVal) < 0.001) {
-        return x;
-      }
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function evaluateExpression(expr, variable, value) {
-  try {
-    let result = expr.replace(new RegExp(variable, 'g'), `(${value})`);
-    result = result.replace(/(\d)\(/g, '$1*(');
-    result = result.replace(/\)(\d)/g, ')*$1');
-    result = result.replace(new RegExp(`\\(${variable}\\)`, 'g'), value);
-    return Function('"use strict"; return (' + result + ')')();
-  } catch {
-    return NaN;
-  }
-}
-
-function generateSolutionSteps(left, right, variable) {
-  const steps = [];
-  
-  steps.push({
-    title: 'Başlangıç',
-    description: 'Verilen denklemi yazalım.',
-    equation: `${left} = ${right}`,
-  });
-
-  steps.push({
-    title: 'Denklemi Organize Et',
-    description: 'Bilinmeyenleri bir tarafa, sabit sayıları diğer tarafa getirelim.',
-    equation: `${left} = ${right}`,
-  });
-
-  steps.push({
-    title: 'Çözümü Hesapla',
-    description: 'Bilinmeyeni izole ederek sonuca ulaşalım.',
-    equation: `${left} = ${right}`,
-  });
-
-  return steps;
 }
 
 function updateProgress() {
@@ -523,49 +403,24 @@ function updateProgress() {
   progressText.textContent = `${state.solvedCount} / ${totalTarget} Çözüldü`;
 }
 
-function switchTab(tabName) {
-  document.querySelectorAll('.tab-content').forEach((tab) => {
-    tab.classList.remove('active');
-  });
-
-  document.querySelectorAll('.tab-btn').forEach((btn) => {
-    btn.classList.remove('active');
-  });
-
-  document.getElementById(tabName).classList.add('active');
-  document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-}
-
 function downloadSolution() {
   const content = `
-╔═════════════════════════════════════════════════════════════════════════╗
-║              DENKLEM ÇÖZÜMÜ - ORTAOKUL MATEMATIK         ║
-╚═════════════════════════════════════════════════════════════════════════╝
+DENKLEM ÇÖZÜMÜ - ORTAOKUL MATEMATIK
+═════════════════════════════════════
 
-📝 DENKLEMİ: ${state.equation}
+📝 DENKLEM: ${state.equation}
 
-✅ ÇÖZÜM: ${state.steps[state.steps.length - 1]?.equation}
+✅ ÇÖZÜM: x = ${state.solution}
 
-───────────────────────────────────────────────────────────────────────────
+─────────────────────────────────────
 
 📊 ADIMLAR:
 
-───────────────────────────────────────────────────────────────────────────
-
-${state.steps
-  .map(
-    (step, index) => `
-ADIM ${index + 1}: ${step.title}
+${state.steps.map((step, i) => `
+ADIM ${i + 1}: ${step.title}
 ${step.description}
 Denklem: ${step.equation}
-`
-  )
-  .join('\n───────────────────────────────────────────────────────────────────────────\n')}
-
-───────────────────────────────────────────────────────────────────────────
-
-📌 NOT: Bu çözüm "Denklem" eğitsel aracı tarafından oluşturulmuştur.
-   Lütfen her adımı dikkatle inceleyiniz.
+`).join('\n─────────────────────────────────────\n')}
 
 ⏰ Oluşturan Zaman: ${new Date().toLocaleString('tr-TR')}
   `.trim();
@@ -599,6 +454,4 @@ function resetState() {
   prevStepBtn.disabled = true;
   nextStepBtn.disabled = true;
   resetBtn.disabled = true;
-
-  autoMode = false;
 }
